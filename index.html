@@ -81,7 +81,7 @@ h1 { font-family: var(--font-display); font-weight: 600; font-size: 26px; line-h
 .stat { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
 
 /* search */
-.searchbar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; background: var(--bg); padding-block: 8px; display: flex; flex-direction: column; gap: 8px; }
+.searchbar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; background: var(--bg); padding-block: 8px; margin-bottom: -8px; display: flex; flex-direction: column; gap: 8px; }
 .field { position: relative; }
 #q { width: 100%; font: 500 20px/1.2 var(--font-body); padding: 14px 44px 14px 16px; border-radius: 12px; border: 2px solid var(--line);
      background: var(--surface); color: var(--ink); letter-spacing: .02em; }
@@ -129,6 +129,15 @@ select { font: inherit; font-size: 16px; padding: 8px 10px; min-height: 44px; bo
 .tag.common { background: var(--accent-soft); color: var(--accent); }
 .tag.mine { background: var(--sunk); color: var(--good); }
 .tag.usedtag { background: var(--sunk); color: var(--muted); }
+.tag.ok { background: var(--sunk); color: var(--good); }
+.tag.hardw { background: var(--trap-soft); color: var(--trap); }
+.tag.rare { background: var(--sunk); color: var(--muted); }
+.icon-btn.no { color: var(--trap); }
+.more-hint { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 12px; border-top: 1px dashed var(--line); background: var(--sunk); font-size: 14px; color: var(--muted); }
+.more-hint:first-child { border-top: 0; }
+.more-hint p { margin: 0; flex: 1 1 220px; min-width: 0; }
+.toast { display: flex; align-items: center; gap: 12px; }
+.toast button { border: 0; background: transparent; color: var(--tile); font-weight: 600; min-height: 36px; padding: 0 4px; }
 .len { font-family: var(--font-mono); font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; min-width: 3.2em; text-align: right; }
 .acts { display: flex; gap: 6px; align-items: center; }
 .chain { border: 0; background: var(--sunk); border-radius: 8px; padding: 6px 9px; font-size: 13px; display: inline-flex; align-items: center; gap: 5px; min-height: 40px; }
@@ -214,11 +223,17 @@ select { font: inherit; font-size: 16px; padding: 8px 10px; min-height: 44px; bo
       <button id="clear" type="button" aria-label="ล้างคำค้น" hidden>×</button>
       <ul id="suggest" class="suggest" role="listbox" aria-label="คำแนะนำ" hidden></ul>
     </div>
-    <div class="controls">
+  </div>
+  <div class="controls">
       <div class="seg" role="group" aria-label="วิธีค้นหา">
         <button type="button" data-mode="start" aria-pressed="true">ขึ้นต้นด้วย</button>
         <button type="button" data-mode="end" aria-pressed="false">ลงท้ายด้วย</button>
         <button type="button" data-mode="contain" aria-pressed="false">มีตัวนี้อยู่</button>
+      </div>
+      <div class="seg" role="group" aria-label="ระดับคำ">
+        <button type="button" data-level="common" aria-pressed="true">คำทั่วไป</button>
+        <button type="button" data-level="hard" aria-pressed="false">+ คำยาก</button>
+        <button type="button" data-level="all" aria-pressed="false">ทุกคำ</button>
       </div>
       <select id="sort" aria-label="เรียงลำดับ">
         <option value="common">คำที่ใช้บ่อยก่อน</option>
@@ -228,12 +243,11 @@ select { font: inherit; font-size: 16px; padding: 8px 10px; min-height: 44px; bo
         <option value="az">A → Z</option>
       </select>
       <label class="chk"><input type="checkbox" id="hideUsed"> ซ่อนคำที่ใช้แล้ว</label>
-    </div>
   </div>
 
   <section aria-label="เลือกตัวอักษรแรก" style="display:flex;flex-direction:column;gap:8px">
     <div class="letters" id="letters"></div>
-    <p class="legend">ตัวเลขใต้ตัวอักษร = จำนวนคำที่ขึ้นต้นด้วยตัวนั้น · ตัวที่เป็น<b>สีส้ม</b>มีคำน้อย ถ้าคำของเราลงท้ายด้วยตัวนี้ คู่แข่งจะต่อยาก</p>
+    <p class="legend">ตัวเลขใต้ตัวอักษร = จำนวนคำที่ขึ้นต้นด้วยตัวนั้น (ตามระดับคำที่เลือก) · ตัวที่เป็น<b>สีส้ม</b>มีคำน้อย ถ้าคำของเราลงท้ายด้วยตัวนี้ คู่แข่งจะต่อยาก</p>
   </section>
 
   <section style="display:flex;flex-direction:column;gap:10px" aria-live="polite">
@@ -241,7 +255,7 @@ select { font: inherit; font-size: 16px; padding: 8px 10px; min-height: 44px; bo
       <h2 id="resultsTitle">คำที่ใช้บ่อย</h2>
       <span class="stat" id="resultsCount" style="color:var(--muted);font-size:13px"></span>
     </div>
-    <ul class="list" id="list"><li class="state"><strong>กำลังโหลดคลังคำ…</strong>ประมาณ 275,000 คำ ใช้เวลาไม่กี่วินาที</li></ul>
+    <ul class="list" id="list"><li class="state"><strong>กำลังโหลดคลังคำ…</strong>ประมาณ 277,000 คำ ใช้เวลาไม่กี่วินาที</li></ul>
     <button type="button" class="more" id="more" hidden>แสดงเพิ่มอีก 60 คำ</button>
   </section>
 
@@ -254,13 +268,17 @@ select { font: inherit; font-size: 16px; padding: 8px 10px; min-height: 44px; bo
     </form>
     <div class="msg" id="addMsg" role="status"></div>
     <div class="mine-list" id="mineList"></div>
+    <div id="rejectBox" hidden style="display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--line);padding-top:12px">
+      <p>คำที่คุณกด <b>เกมไม่รับ</b> ไว้ (<span class="stat" id="rejectCount">0</span> คำ) จะไม่ขึ้นในผลค้นหาอีก กด ↺ เพื่อเอากลับมา</p>
+      <div class="mine-list" id="rejectList"></div>
+    </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;border-top:1px solid var(--line);padding-top:12px">
       <span style="flex:1 1 200px;color:var(--muted);font-size:14px">คำที่ใช้แล้วในรอบนี้: <b class="stat" id="usedCount" style="color:var(--ink)">0</b> คำ (เกมห้ามใช้คำซ้ำในรอบเดียวกัน)</span>
       <button type="button" class="icon-btn" id="resetUsed">เริ่มรอบใหม่</button>
     </div>
   </section>
 
-  <p class="foot">คลังคำจากพจนานุกรมภาษาอังกฤษแบบเปิด (word-list) รวมกับคำยอดนิยม 10,000 คำ · คำบางคำเกมอาจไม่รับ</p>
+  <p class="foot">คำทั่วไปและคำยากจัดระดับตาม SCOWL · คำอื่นจากพจนานุกรม word-list · เกมไม่เปิดเผยรายการคำที่รับ เจอคำที่ใช้ไม่ได้ให้กด “เกมไม่รับ”</p>
 </div>
 <div class="toast" id="toast" role="status" hidden></div>
 
@@ -272,15 +290,18 @@ select { font: inherit; font-size: 16px; padding: 8px 10px; min-height: 44px; bo
   const els = { q: $("q"), clear: $("clear"), suggest: $("suggest"), sort: $("sort"), hideUsed: $("hideUsed"), letters: $("letters"),
     list: $("list"), more: $("more"), resultsTitle: $("resultsTitle"), resultsCount: $("resultsCount"), totalStat: $("totalStat"),
     addForm: $("addForm"), newWord: $("newWord"), addBtn: $("addBtn"), addMsg: $("addMsg"), mineList: $("mineList"), storeNote: $("storeNote"),
-    usedCount: $("usedCount"), resetUsed: $("resetUsed"), toast: $("toast") };
+    usedCount: $("usedCount"), resetUsed: $("resetUsed"), toast: $("toast"),
+    rejectBox: $("rejectBox"), rejectList: $("rejectList"), rejectCount: $("rejectCount") };
 
   // ---------- data ----------
   let alpha = [];                // every dictionary word, A→Z
-  let dictSet = new Set();
+  let dict = new Map();          // word -> tier: 1-3 everyday (SCOWL ≤50), 4-5 harder (≤70), 9 rare/technical
   const commonRank = new Map();  // word -> popularity rank
   let commonList = [];
   let custom = new Map();        // added words -> {addedAt}
   let customSorted = [];
+  let verdicts = new Map();      // word -> true (game accepted it) | false (game rejected it)
+  const LEVEL_MAX = { common: 3, hard: 5, all: 9 };
   const startCount = Object.fromEntries(LETTERS.map((l) => [l, 0]));
   let loaded = false;
 
@@ -289,36 +310,50 @@ select { font: inherit; font-size: 16px; padding: 8px 10px; min-height: 44px; bo
     set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
   };
   let used = new Set(store.get("ftw-used-v1", []));
-  const state = { q: "", mode: "start", sort: store.get("ftw-sort", "common"), hideUsed: store.get("ftw-hide", false), shown: PAGE, active: -1, sugg: [] };
+  const state = { q: "", mode: "start", level: store.get("ftw-level", "common"), sort: store.get("ftw-sort", "common"), hideUsed: store.get("ftw-hide", false), shown: PAGE, active: -1, sugg: [] };
   els.sort.value = state.sort;
   els.hideUsed.checked = state.hideUsed;
 
   const clean = (s) => s.toLowerCase().replace(/[^a-z]/g, "");
   const fmt = (n) => n.toLocaleString("en-US");
-  const rankOf = (w) => commonRank.has(w) ? commonRank.get(w) : 1e7;
+  const tierOf = (w) => dict.get(w) ?? 0;   // added words count as everyday words
+  const rejected = (w) => verdicts.get(w) === false;
+  const accepted = (w) => verdicts.get(w) === true;
+  const allowedAt = (level) => { const max = LEVEL_MAX[level]; return (w) => !rejected(w) && (tierOf(w) <= max || accepted(w)); };
+  // lower = shows first: words the game accepted, then popular, then by level
+  const rankOf = (w) => accepted(w) ? -1 : commonRank.has(w) && tierOf(w) <= 3 ? commonRank.get(w) : 1e5 + tierOf(w) * 1e5;
 
   function recount() {
+    const ok = allowedAt(state.level);
     for (const l of LETTERS) startCount[l] = 0;
-    for (const w of alpha) startCount[w[0]]++;
-    for (const w of customSorted) if (!dictSet.has(w)) startCount[w[0]]++;
+    for (const w of alpha) if (ok(w)) startCount[w[0]]++;
+    for (const w of customSorted) if (!dict.has(w) && ok(w)) startCount[w[0]]++;
   }
   const maxStart = () => Math.max(...LETTERS.map((l) => startCount[l]));
   const isHardLetter = (l) => startCount[l] > 0 && startCount[l] < maxStart() * 0.12;
 
   async function loadWords() {
-    renderState("กำลังโหลดคลังคำ…", "ประมาณ 275,000 คำ ใช้เวลาไม่กี่วินาที");
+    renderState("กำลังโหลดคลังคำ…", "ประมาณ 277,000 คำ ใช้เวลาไม่กี่วินาที");
     try {
       const res = await fetch("words.txt");
       if (!res.ok) throw new Error(res.status);
       const text = await res.text();
       const cut = text.indexOf("\n#\n");
       commonList = text.slice(0, cut).split("\n").filter(Boolean);
-      alpha = text.slice(cut + 3).split("\n").filter(Boolean);
-      dictSet = new Set(alpha);
+      const lines = text.slice(cut + 3).split("\n");
+      alpha = [];
+      dict = new Map();
+      for (const line of lines) {
+        if (!line) continue;
+        const last = line.charCodeAt(line.length - 1);
+        const tier = last >= 49 && last <= 53 ? last - 48 : 9;   // trailing digit 1-5, none = rare
+        const w = tier === 9 ? line : line.slice(0, -1);
+        alpha.push(w); dict.set(w, tier);
+      }
       commonList.forEach((w, i) => commonRank.set(w, i));
       loaded = true;
       recount();
-      els.totalStat.textContent = fmt(alpha.length) + " คำในคลัง";
+      renderTotal();
       renderLetters();
       update();
     } catch (e) {
@@ -327,28 +362,36 @@ select { font: inherit; font-size: 16px; padding: 8px 10px; min-height: 44px; bo
     }
   }
 
+  function renderTotal() {
+    let everyday = 0;
+    for (const t of dict.values()) if (t <= 3) everyday++;
+    els.totalStat.textContent = `${fmt(everyday)} คำทั่วไป · ${fmt(alpha.length)} คำทั้งหมด`;
+  }
+
   // ---------- search ----------
   function lowerBound(arr, q) {
     let lo = 0, hi = arr.length;
     while (lo < hi) { const mid = (lo + hi) >> 1; if (arr[mid] < q) lo = mid + 1; else hi = mid; }
     return lo;
   }
-  function findMatches() {
+  function findMatches(level = state.level, sort = true) {
     const q = state.q;
+    const ok = allowedAt(level);
     let out = [];
     if (!q) {
-      out = commonList.slice();
-      for (const w of customSorted) if (!commonRank.has(w)) out.push(w);
+      for (const w of verdicts.keys()) if (accepted(w) && !commonRank.has(w)) out.push(w);
+      for (const w of commonList) if (ok(w)) out.push(w);
+      for (const w of customSorted) if (!commonRank.has(w) && !accepted(w) && ok(w)) out.push(w);
     } else if (state.mode === "start") {
-      for (let i = lowerBound(alpha, q); i < alpha.length && alpha[i].startsWith(q); i++) out.push(alpha[i]);
-      for (const w of customSorted) if (w.startsWith(q) && !dictSet.has(w)) out.push(w);
+      for (let i = lowerBound(alpha, q); i < alpha.length && alpha[i].startsWith(q); i++) if (ok(alpha[i])) out.push(alpha[i]);
+      for (const w of customSorted) if (w.startsWith(q) && !dict.has(w) && ok(w)) out.push(w);
     } else {
       const test = state.mode === "end" ? (w) => w.endsWith(q) : (w) => w.includes(q);
-      for (const w of alpha) if (test(w)) out.push(w);
-      for (const w of customSorted) if (test(w) && !dictSet.has(w)) out.push(w);
+      for (const w of alpha) if (test(w) && ok(w)) out.push(w);
+      for (const w of customSorted) if (test(w) && !dict.has(w) && ok(w)) out.push(w);
     }
     if (state.hideUsed) out = out.filter((w) => !used.has(w));
-    return sortWords(out);
+    return sort ? sortWords(out) : out;
   }
   function sortWords(arr) {
     const byRank = (a, b) => rankOf(a) - rankOf(b) || (a < b ? -1 : a > b ? 1 : 0);
@@ -357,14 +400,7 @@ select { font: inherit; font-size: 16px; padding: 8px 10px; min-height: 44px; bo
       case "short": return arr.sort((a, b) => a.length - b.length || byRank(a, b));
       case "trap": return arr.sort((a, b) => startCount[a[a.length - 1]] - startCount[b[b.length - 1]] || b.length - a.length || byRank(a, b));
       case "az": return arr.sort();
-      default: {
-        // popular words by rank first, then the rest in their current (A→Z) order
-        const pop = [], rest = [];
-        for (const w of arr) (commonRank.has(w) ? pop : rest).push(w);
-        pop.sort((a, b) => commonRank.get(a) - commonRank.get(b));
-        if (!state.q) rest.sort();
-        return pop.concat(rest);
-      }
+      default: return arr.sort(byRank);
     }
   }
 
@@ -379,8 +415,12 @@ select { font: inherit; font-size: 16px; padding: 8px 10px; min-height: 44px; bo
   }
   function tags(w) {
     let t = "";
-    if (commonRank.has(w)) t += '<span class="tag common">ใช้บ่อย</span>';
-    if (custom.has(w) && !dictSet.has(w)) t += '<span class="tag mine">เพิ่มเอง</span>';
+    const tier = tierOf(w);
+    if (accepted(w)) t += '<span class="tag ok">✓ เกมรับ</span>';
+    if (commonRank.has(w) && tier <= 3) t += '<span class="tag common">ใช้บ่อย</span>';
+    if (tier === 4 || tier === 5) t += '<span class="tag hardw">คำยาก</span>';
+    if (tier === 9) t += '<span class="tag rare">หายาก</span>';
+    if (custom.has(w) && !dict.has(w)) t += '<span class="tag mine">เพิ่มเอง</span>';
     if (used.has(w)) t += '<span class="tag usedtag">ใช้แล้ว</span>';
     return t;
   }
@@ -406,8 +446,17 @@ select { font: inherit; font-size: 16px; padding: 8px 10px; min-height: 44px; bo
     const modeText = { start: "ขึ้นต้นด้วย", end: "ลงท้ายด้วย", contain: "มี" }[state.mode];
     els.resultsTitle.textContent = q ? `คำที่${modeText} “${q.toUpperCase()}”` : "คำที่ใช้บ่อย";
     els.resultsCount.textContent = `พบ ${fmt(results.length)} คำ`;
+    // few everyday words (e.g. X): offer the harder levels, flagged as risky
+    let hint = "";
+    if (q && state.level !== "all" && results.length < 25) {
+      const nextLevel = state.level === "common" ? "hard" : "all";
+      const extra = findMatches(nextLevel, false).length - results.length;
+      if (extra > 0) hint = `<li class="more-hint"><p>มีอีก <b class="stat">${fmt(extra)}</b> คำใน${nextLevel === "hard" ? "ระดับคำยาก" : "คำหายาก/ศัพท์เทคนิค"} เกมอาจไม่รับบางคำ</p>
+        <button type="button" class="icon-btn" data-level-to="${nextLevel}">แสดงด้วย</button></li>`;
+    }
     if (!results.length) {
-      renderState(q ? `ไม่พบคำที่${modeText} “${q}”` : "ยังไม่มีคำ", q ? "ลองเปลี่ยนวิธีค้นหา หรือเพิ่มคำนี้เองได้ที่ด้านล่าง" : "", false);
+      renderState(q ? `ไม่พบคำที่${modeText} “${q}” ในระดับนี้` : "ยังไม่มีคำ", q ? "ลองเปลี่ยนระดับคำหรือวิธีค้นหา หรือเพิ่มคำนี้เองได้ที่ด้านล่าง" : "", false);
+      if (hint) els.list.insertAdjacentHTML("beforeend", hint);
       return;
     }
     const slice = results.slice(0, state.shown);
@@ -420,9 +469,10 @@ select { font: inherit; font-size: 16px; padding: 8px 10px; min-height: 44px; bo
         <div class="acts">
           <button type="button" class="chain${hard ? " trap" : ""}" data-act="chain" data-l="${last}" title="ดูคำที่ขึ้นต้นด้วย ${last.toUpperCase()}">ต่อด้วย <span class="mini">${last}</span>${hard ? " ต่อยาก" : ""}</button>
           <button type="button" class="icon-btn" data-act="copy">คัดลอก</button>
-          <button type="button" class="icon-btn${used.has(w) ? " on" : ""}" data-act="used" aria-pressed="${used.has(w)}">${used.has(w) ? "เลิกทำเครื่องหมาย" : "ใช้แล้ว"}</button>
+          <button type="button" class="icon-btn${used.has(w) ? " on" : ""}" data-act="used" aria-pressed="${used.has(w)}" title="เกมรับคำนี้ และใช้ไปแล้วในรอบนี้">${used.has(w) ? "ยกเลิก" : "✓ ใช้แล้ว"}</button>
+          <button type="button" class="icon-btn no" data-act="reject" title="เกมไม่รับคำนี้ ซ่อนไม่ให้ขึ้นอีก">✗ ไม่รับ</button>
         </div></li>`;
-    }).join("");
+    }).join("") + (state.shown >= results.length ? hint : "");
     const left = results.length - state.shown;
     els.more.hidden = left <= 0;
     els.more.textContent = `แสดงเพิ่มอีก ${fmt(Math.min(PAGE, left))} คำ`;
@@ -448,15 +498,28 @@ select { font: inherit; font-size: 16px; padding: 8px 10px; min-height: 44px; bo
   }
   const compact = (n) => n >= 1000 ? (n / 1000).toFixed(n >= 10000 ? 0 : 1) + "k" : String(n);
 
+  function renderRejected() {
+    const list = [...verdicts.keys()].filter(rejected).sort();
+    els.rejectBox.hidden = !list.length;
+    els.rejectCount.textContent = fmt(list.length);
+    els.rejectList.innerHTML = list.map((w) => `<span class="chip">${esc(w)}<button type="button" data-restore="${w}" aria-label="เอาคำ ${w} กลับมา">↺</button></span>`).join("");
+  }
   function renderMine() {
     els.mineList.innerHTML = customSorted.map((w) => `<span class="chip">${esc(w)}<button type="button" data-del="${w}" aria-label="ลบคำ ${w}">✕</button></span>`).join("");
   }
 
   // ---------- actions ----------
   let toastTimer;
-  function toast(text) {
-    els.toast.textContent = text; els.toast.hidden = false;
-    clearTimeout(toastTimer); toastTimer = setTimeout(() => (els.toast.hidden = true), 2200);
+  function toast(text, action) {
+    els.toast.textContent = text;
+    if (action) {
+      const b = document.createElement("button");
+      b.type = "button"; b.textContent = action.label;
+      b.addEventListener("click", () => { els.toast.hidden = true; action.run(); });
+      els.toast.append(b);
+    }
+    els.toast.hidden = false;
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => (els.toast.hidden = true), action ? 5000 : 2200);
   }
   function copy(w) {
     const done = () => toast(`คัดลอก “${w}” แล้ว`);
@@ -465,7 +528,8 @@ select { font: inherit; font-size: 16px; padding: 8px 10px; min-height: 44px; bo
     } catch { toast(`คัดลอกไม่ได้ กดค้างที่คำ “${w}” เพื่อเลือกข้อความแทน`); }
   }
   function toggleUsed(w) {
-    used.has(w) ? used.delete(w) : used.add(w);
+    if (used.has(w)) used.delete(w);
+    else { used.add(w); if (!accepted(w)) setVerdict(w, true); }
     store.set("ftw-used-v1", [...used]);
     els.usedCount.textContent = used.size;
     update(true);
@@ -521,15 +585,30 @@ select { font: inherit; font-size: 16px; padding: 8px 10px; min-height: 44px; bo
   els.clear.addEventListener("click", () => { setQuery(""); els.q.focus(); });
 
   document.querySelectorAll("[data-mode]").forEach((b) => b.addEventListener("click", () => setMode(b.dataset.mode)));
+  function setLevel(level) {
+    state.level = level; store.set("ftw-level", level);
+    document.querySelectorAll("[data-level]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.level === level)));
+    if (loaded) { recount(); renderLetters(); update(); }
+  }
+  document.querySelectorAll("[data-level]").forEach((b) => b.addEventListener("click", () => setLevel(b.dataset.level)));
+  setLevel(LEVEL_MAX[state.level] ? state.level : "common");
   els.sort.addEventListener("change", () => { state.sort = els.sort.value; store.set("ftw-sort", state.sort); update(); });
   els.hideUsed.addEventListener("change", () => { state.hideUsed = els.hideUsed.checked; store.set("ftw-hide", state.hideUsed); update(); });
   els.letters.addEventListener("click", (e) => { const b = e.target.closest(".lt"); if (b) setQuery(b.dataset.l, "start"); });
   els.more.addEventListener("click", () => { state.shown += PAGE; renderResults(); });
   els.list.addEventListener("click", (e) => {
+    const lv = e.target.closest("button[data-level-to]");
+    if (lv) { setLevel(lv.dataset.levelTo); return; }
     const btn = e.target.closest("button[data-act]"); if (!btn) return;
     const w = btn.closest(".row").dataset.w;
     if (btn.dataset.act === "copy") copy(w);
     else if (btn.dataset.act === "used") toggleUsed(w);
+    else if (btn.dataset.act === "reject") {
+      const before = verdicts.has(w) ? verdicts.get(w) : null;
+      used.delete(w); store.set("ftw-used-v1", [...used]); els.usedCount.textContent = used.size;
+      setVerdict(w, false);
+      toast(`ซ่อน “${w}” แล้ว จะไม่ขึ้นอีก`, { label: "เลิกทำ", run: () => setVerdict(w, before) });
+    }
     else if (btn.dataset.act === "chain") { setQuery(btn.dataset.l, "start"); window.scrollTo({ top: 0, behavior: "smooth" }); }
   });
   els.resetUsed.addEventListener("click", () => {
@@ -555,7 +634,7 @@ select { font: inherit; font-size: 16px; padding: 8px 10px; min-height: 44px; bo
     if (!raw) return showMsg("พิมพ์คำที่ต้องการเพิ่มก่อน", "err");
     if (w !== raw.toLowerCase()) return showMsg("ใช้ได้เฉพาะตัวอักษร a–z ไม่มีเว้นวรรค ตัวเลข หรือขีด", "err");
     if (w.length < 2) return showMsg("คำต้องยาวอย่างน้อย 2 ตัวอักษร", "err");
-    if (dictSet.has(w) || custom.has(w)) return showMsg(`“${w}” มีในคลังแล้ว`, "err");
+    if (dict.has(w) || custom.has(w)) return showMsg(`“${w}” มีในคลังแล้ว`, "err");
     if (readOnly) return showMsg("คุณดูได้อย่างเดียว เพิ่มคำไม่ได้ ขอสิทธิ์แก้ไขจากเจ้าของหน้านี้", "err");
     els.addBtn.disabled = true;
     try {
@@ -588,10 +667,32 @@ select { font: inherit; font-size: 16px; padding: 8px 10px; min-height: 44px; bo
     } catch { showMsg("ลบไม่สำเร็จ ลองอีกครั้ง", "err"); }
   });
 
+  function applyVerdicts(map) {
+    verdicts = map;
+    if (loaded) { recount(); renderLetters(); update(true); }
+    renderRejected();
+  }
+  async function setVerdict(w, value) {
+    const next = new Map(verdicts);
+    value === null ? next.delete(w) : next.set(w, value);
+    applyVerdicts(next);
+    if (!db) { store.set("ftw-verdicts-v1", Object.fromEntries(verdicts)); return; }
+    try {
+      const ref = db.collection("verdicts").doc(w);
+      if (value === null) await ref.delete(); else await ref.set({ ok: value, at: Date.now() });
+    } catch {
+      toast("บันทึกไม่สำเร็จ ลองอีกครั้ง");
+    }
+  }
+  els.rejectList.addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-restore]"); if (b) setVerdict(b.dataset.restore, null);
+  });
+
   function useLocal() {
     db = null;
     els.storeNote.textContent = "คำที่เพิ่มจะบันทึกไว้ในเบราว์เซอร์นี้เท่านั้น";
     setCustom(new Map(Object.entries(store.get("ftw-custom-v1", {}))));
+    applyVerdicts(new Map(Object.entries(store.get("ftw-verdicts-v1", {}))));
   }
   async function connect() {
     let found = null;
@@ -604,6 +705,11 @@ select { font: inherit; font-size: 16px; padding: 8px 10px; min-height: 44px; bo
       for (const d of snap.docs) { const w = clean(d.id); if (w.length >= 2) map.set(w, d.data() || {}); }
       setCustom(map);
     }, () => useLocal());
+    db.collection("verdicts").limit(1000).onSnapshot((snap) => {
+      const map = new Map();
+      for (const d of snap.docs) { const w = clean(d.id); const v = d.data() || {}; if (w.length >= 2 && typeof v.ok === "boolean") map.set(w, v.ok); }
+      applyVerdicts(map);
+    }, () => {});
   }
 
   // ---------- app install / share / offline (standalone site only) ----------

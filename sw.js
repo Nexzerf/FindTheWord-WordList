@@ -1,5 +1,5 @@
 // คลังคำ Finish the Word: offline cache. Bump VERSION whenever index.html or words.txt changes.
-const VERSION = "ftw-v1";
+const VERSION = "ftw-v2";
 const FONTS = "ftw-fonts";
 const SHELL = ["./", "index.html", "words.txt", "manifest.webmanifest",
   "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png", "icons/icon.svg"];
