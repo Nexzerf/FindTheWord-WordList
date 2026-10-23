@@ -21,13 +21,13 @@
 | `words.txt` | คลังคำอังกฤษ: คำยอดนิยมเรียงตามความนิยม, บรรทัด `#`, แล้วคำทั้งหมด A→Z; ตัวเลขท้ายคำคือระดับ (1–3 คำทั่วไป = SCOWL ≤50, 4–5 คำยาก = SCOWL 55–70, ไม่มีตัวเลข = หายาก) |
 | `sw.js` | service worker เก็บหน้าเว็บและคลังคำไว้ใช้ offline |
 | `manifest.webmanifest`, `icons/` | ข้อมูลแอป PWA และไอคอน |
-| `vercel.json` | header ของ Vercel (ไม่ cache `sw.js`, content type ของ manifest) |
+| `netlify.toml` | ตั้งค่า Netlify: publish โฟลเดอร์หลัก ไม่มี build, header (ไม่ cache `sw.js`, content type ของ manifest) |
 
 เมื่อแก้ `index.html` หรือ `words.txt` ให้เปลี่ยน `VERSION` ใน `sw.js` ด้วย เครื่องที่ติดตั้งไว้จะได้โหลดของใหม่
 
-## Deploy บน Vercel
+## Deploy บน Netlify
 
-เป็นเว็บ static ล้วน: ใน Vercel กด **Add New → Project → Import** repo นี้ ตั้ง Framework Preset เป็น **Other** ไม่ต้องใส่ Build Command แล้วกด Deploy
+เป็นเว็บ static ล้วน เชื่อม repo นี้กับ Netlify แล้วทุกครั้งที่ push ขึ้น `main` จะ deploy อัตโนมัติ ไม่ต้องตั้ง Build command (`netlify.toml` กำหนด publish directory เป็นโฟลเดอร์หลักไว้แล้ว)
 
 ## ทดสอบในเครื่อง
 
