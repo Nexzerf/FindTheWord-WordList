@@ -137,6 +137,10 @@ select { font: inherit; font-size: 16px; padding: 8px 10px; min-height: 44px; bo
 .icon-btn.no { color: var(--trap); }
 .more-hint { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 12px; border-top: 1px dashed var(--line); background: var(--sunk); font-size: 14px; color: var(--muted); }
 .more-hint:first-child { border-top: 0; }
+.more-hint.add-hint { background: var(--accent-soft); color: var(--ink); }
+.more-hint .primary { min-height: 40px; }
+.suggest li.add-opt { color: var(--accent); font-weight: 600; }
+.panel a { color: var(--accent); }
 .more-hint p { margin: 0; flex: 1 1 220px; min-width: 0; }
 .toast { display: flex; align-items: center; gap: 12px; }
 .toast button { border: 0; background: transparent; color: var(--tile); font-weight: 600; min-height: 36px; padding: 0 4px; }
@@ -270,6 +274,7 @@ select { font: inherit; font-size: 16px; padding: 8px 10px; min-height: 44px; bo
   <section class="panel" aria-labelledby="addTitle">
     <h2 id="addTitle">เพิ่มคำที่ยังไม่มี</h2>
     <p id="storeNote">เจอคำที่เกมรับแต่ในคลังยังไม่มี? เพิ่มไว้ได้เลย</p>
+    <p>หาคำอ้างอิงเพิ่มได้ที่ <a href="https://lastletterlibrary.com/" target="_blank" rel="noopener">Last Letter Library</a> แล้วพิมพ์คำในช่องค้นหาด้านบน ถ้ายังไม่มีในคลังจะมีปุ่ม “+ เพิ่มคำนี้” ให้กด</p>
     <form class="addrow" id="addForm" novalidate>
       <input id="newWord" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="เช่น kubernetes" aria-label="คำใหม่" maxlength="40">
       <button class="primary" type="submit" id="addBtn">เพิ่มคำ</button>
@@ -519,8 +524,12 @@ select { font: inherit; font-size: 16px; padding: 8px 10px; min-height: 44px; bo
       if (extra > 0) hint = `<li class="more-hint"><p>มีอีก <b class="stat">${fmt(extra)}</b> คำใน${nextLevel === "hard" ? "ระดับคำยาก" : "คำหายาก/ศัพท์เทคนิค"} เกมอาจไม่รับบางคำ</p>
         <button type="button" class="icon-btn" data-level-to="${nextLevel}">แสดงด้วย</button></li>`;
     }
+    // the typed word isn't in the list at all: one tap to add it (as a word the game accepts)
+    const addRow = canQuickAdd() ? `<li class="more-hint add-hint"><p>“<b>${esc(q)}</b>” ยังไม่มีในคลัง ถ้าเกมรับคำนี้ เพิ่มไว้ได้เลย</p>
+        <button type="button" class="primary" data-add-word="${q}">+ เพิ่มคำนี้</button></li>` : "";
     if (!results.length) {
-      renderState(q ? `ไม่พบคำที่${modeText} “${q}” ในระดับนี้` : "ยังไม่มีคำ", q ? "ลองเปลี่ยนระดับคำหรือวิธีค้นหา หรือเพิ่มคำนี้เองได้ที่ด้านล่าง" : "", false);
+      renderState(q ? `ไม่พบคำที่${modeText} “${q}” ในระดับนี้` : "ยังไม่มีคำ", q ? "ลองเปลี่ยนระดับคำหรือวิธีค้นหา หรือเพิ่มคำนี้เป็นคำใหม่" : "", false);
+      if (addRow) els.list.insertAdjacentHTML("beforeend", addRow);
       if (hint) els.list.insertAdjacentHTML("beforeend", hint);
       return;
     }
@@ -538,13 +547,28 @@ select { font: inherit; font-size: 16px; padding: 8px 10px; min-height: 44px; bo
           <button type="button" class="icon-btn no" data-act="reject" title="เกมไม่รับคำนี้ ซ่อนไม่ให้ขึ้นอีก">✗ ไม่รับ</button>
         </div></li>`;
     }).join("") + (state.shown >= results.length ? hint : "");
+    if (addRow) els.list.insertAdjacentHTML(results.length <= 3 ? "afterbegin" : "beforeend", addRow);
     const left = results.length - state.shown;
     els.more.hidden = left <= 0;
     els.more.textContent = `แสดงเพิ่มอีก ${fmt(Math.min(PAGE, left))} คำ`;
   }
 
+  function canQuickAdd() {
+    const q = state.q;
+    return loaded && q.length >= 2 && !dict.has(q) && !custom.has(q);
+  }
   function renderSuggest() {
-    const open = !!state.q && document.activeElement === els.q && results.length > 0;
+    const focused = !!state.q && document.activeElement === els.q;
+    if (focused && !results.length && canQuickAdd()) {
+      state.sugg = ["+" + state.q];
+      state.active = 0;
+      els.suggest.hidden = false;
+      els.q.setAttribute("aria-expanded", "true");
+      els.suggest.innerHTML = `<li role="option" id="sg0" class="add-opt" data-add="${state.q}" aria-selected="true">+ เพิ่ม “${esc(state.q)}” เข้าคลัง (เกมรับคำนี้)</li>`;
+      els.q.setAttribute("aria-activedescendant", "sg0");
+      return;
+    }
+    const open = focused && results.length > 0;
     state.sugg = open ? results.slice(0, 8) : [];
     state.active = Math.min(state.active, state.sugg.length - 1);
     els.suggest.hidden = !open;
@@ -611,6 +635,7 @@ select { font: inherit; font-size: 16px; padding: 8px 10px; min-height: 44px; bo
     if (!silent) update();
   }
   function pickSuggestion(w) {
+    if (w.startsWith("+")) { quickAdd(w.slice(1)); return; }
     copy(w);
     els.suggest.hidden = true; els.q.setAttribute("aria-expanded", "false");
   }
@@ -646,7 +671,10 @@ select { font: inherit; font-size: 16px; padding: 8px 10px; min-height: 44px; bo
   els.q.addEventListener("focus", fitSuggest);
   function scrollActive() { const el = $("sg" + state.active); if (el) el.scrollIntoView({ block: "nearest" }); }
   els.suggest.addEventListener("mousedown", (e) => e.preventDefault());
-  els.suggest.addEventListener("click", (e) => { const li = e.target.closest("li[data-w]"); if (li) pickSuggestion(li.dataset.w); });
+  els.suggest.addEventListener("click", (e) => {
+    const add = e.target.closest("li[data-add]"); if (add) { quickAdd(add.dataset.add); return; }
+    const li = e.target.closest("li[data-w]"); if (li) pickSuggestion(li.dataset.w);
+  });
   els.clear.addEventListener("click", () => { setQuery(""); els.q.focus(); });
 
   document.querySelectorAll("[data-mode]").forEach((b) => b.addEventListener("click", () => setMode(b.dataset.mode)));
@@ -672,6 +700,8 @@ select { font: inherit; font-size: 16px; padding: 8px 10px; min-height: 44px; bo
   els.letters.addEventListener("click", (e) => { const b = e.target.closest(".lt"); if (b) setQuery(b.dataset.l, "start"); });
   els.more.addEventListener("click", () => { state.shown += PAGE; renderResults(); });
   els.list.addEventListener("click", (e) => {
+    const addBtn = e.target.closest("button[data-add-word]");
+    if (addBtn) { quickAdd(addBtn.dataset.addWord); return; }
     const lv = e.target.closest("button[data-level-to]");
     if (lv) { setLevel(lv.dataset.levelTo); return; }
     const btn = e.target.closest("button[data-act]"); if (!btn) return;
@@ -702,29 +732,53 @@ select { font: inherit; font-size: 16px; padding: 8px 10px; min-height: 44px; bo
   function saveLocalCustom() { store.set("ftw-custom-v1", Object.fromEntries(custom)); }
 
   function showMsg(text, kind) { els.addMsg.textContent = text; els.addMsg.className = "msg " + (kind || ""); }
-  els.addForm.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const raw = els.newWord.value.trim();
-    const w = clean(raw);
-    if (!raw) return showMsg("พิมพ์คำที่ต้องการเพิ่มก่อน", "err");
-    if (w !== raw.toLowerCase()) return showMsg("ใช้ได้เฉพาะตัวอักษร a–z ไม่มีเว้นวรรค ตัวเลข หรือขีด", "err");
-    if (w.length < 2) return showMsg("คำต้องยาวอย่างน้อย 2 ตัวอักษร", "err");
-    if (dict.has(w) || custom.has(w)) return showMsg(`“${w}” มีในคลังแล้ว`, "err");
-    if (readOnly) return showMsg("คุณดูได้อย่างเดียว เพิ่มคำไม่ได้ ขอสิทธิ์แก้ไขจากเจ้าของหน้านี้", "err");
-    els.addBtn.disabled = true;
+  // returns an error message, or "" when the word was added
+  async function addWord(w) {
+    if (w.length < 2) return "คำต้องยาวอย่างน้อย 2 ตัวอักษร";
+    if (dict.has(w) || custom.has(w)) return `“${w}” มีในคลังแล้ว`;
+    if (readOnly) return "คุณดูได้อย่างเดียว เพิ่มคำไม่ได้ ขอสิทธิ์แก้ไขจากเจ้าของหน้านี้";
     try {
       if (db) {
         await db.collection("words").doc(w).set({ word: w, addedAt: Date.now() });
       } else {
         const next = new Map(custom); next.set(w, { addedAt: Date.now() }); setCustom(next); saveLocalCustom();
       }
-      els.newWord.value = "";
-      showMsg(`เพิ่ม “${w}” แล้ว`, "ok");
+      return "";
     } catch (err) {
-      if (err && err.code === "invalid_argument") { readOnly = true; showMsg("คุณดูได้อย่างเดียว เพิ่มคำไม่ได้ ขอสิทธิ์แก้ไขจากเจ้าของหน้านี้", "err"); }
-      else if (err && err.code === "quota_exceeded") showMsg("คลังคำที่เพิ่มเองเต็มแล้ว ลบคำที่ไม่ใช้ออกก่อน", "err");
-      else showMsg("บันทึกไม่สำเร็จ ลองอีกครั้ง", "err");
-    } finally { els.addBtn.disabled = false; }
+      if (err && err.code === "invalid_argument") { readOnly = true; return "คุณดูได้อย่างเดียว เพิ่มคำไม่ได้ ขอสิทธิ์แก้ไขจากเจ้าของหน้านี้"; }
+      if (err && err.code === "quota_exceeded") return "คลังคำที่เพิ่มเองเต็มแล้ว ลบคำที่ไม่ใช้ออกก่อน";
+      return "บันทึกไม่สำเร็จ ลองอีกครั้ง";
+    }
+  }
+  // from the search box: the player saw the game accept it, so record that too
+  async function quickAdd(w) {
+    els.suggest.hidden = true; els.q.setAttribute("aria-expanded", "false");
+    const err = await addWord(w);
+    if (err) { toast(err); return; }
+    await setVerdict(w, true);
+    toast(`เพิ่ม “${w}” เข้าคลังแล้ว`, { label: "เลิกทำ", run: () => removeWord(w) });
+  }
+  async function removeWord(w) {
+    try {
+      if (db) await db.collection("words").doc(w).delete();
+      else { const next = new Map(custom); next.delete(w); setCustom(next); saveLocalCustom(); }
+      if (accepted(w)) await setVerdict(w, null);
+      return true;
+    } catch { toast("ลบไม่สำเร็จ ลองอีกครั้ง"); return false; }
+  }
+
+  els.addForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const raw = els.newWord.value.trim();
+    const w = clean(raw);
+    if (!raw) return showMsg("พิมพ์คำที่ต้องการเพิ่มก่อน", "err");
+    if (w !== raw.toLowerCase()) return showMsg("ใช้ได้เฉพาะตัวอักษร a–z ไม่มีเว้นวรรค ตัวเลข หรือขีด", "err");
+    els.addBtn.disabled = true;
+    const err = await addWord(w);
+    els.addBtn.disabled = false;
+    if (err) return showMsg(err, "err");
+    els.newWord.value = "";
+    showMsg(`เพิ่ม “${w}” แล้ว`, "ok");
   });
 
   els.mineList.addEventListener("click", async (e) => {
@@ -735,11 +789,7 @@ select { font: inherit; font-size: 16px; padding: 8px 10px; min-height: 44px; bo
       setTimeout(() => { if (b.isConnected) { b.classList.remove("confirm"); b.textContent = "✕"; } }, 3000);
       return;
     }
-    try {
-      if (db) await db.collection("words").doc(w).delete();
-      else { const next = new Map(custom); next.delete(w); setCustom(next); saveLocalCustom(); }
-      showMsg(`ลบ “${w}” แล้ว`, "ok");
-    } catch { showMsg("ลบไม่สำเร็จ ลองอีกครั้ง", "err"); }
+    if (await removeWord(w)) showMsg(`ลบ “${w}” แล้ว`, "ok");
   });
 
   function applyVerdicts(map) {
