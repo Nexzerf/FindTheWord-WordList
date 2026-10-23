@@ -1,7 +1,7 @@
 // คลังคำ Finish the Word: offline cache. Bump VERSION whenever index.html or words.txt changes.
-const VERSION = "ftw-v2";
+const VERSION = "ftw-v3";
 const FONTS = "ftw-fonts";
-const SHELL = ["./", "index.html", "words.txt", "manifest.webmanifest",
+const SHELL = ["./", "index.html", "words.txt", "words-id.txt", "manifest.webmanifest",
   "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png", "icons/icon.svg"];
 
 self.addEventListener("install", (event) => {
@@ -37,9 +37,12 @@ self.addEventListener("fetch", (event) => {
     );
     return;
   }
-  // the 2.8 MB word list never changes within a version: cache first
-  if (url.pathname.endsWith("/words.txt")) {
-    event.respondWith(caches.match(req, { ignoreSearch: true }).then((hit) => hit || fetch(req)));
+  // word lists never change within a version: cache first
+  if (/\/words(-id)?\.txt$/.test(url.pathname)) {
+    event.respondWith(caches.match(req, { ignoreSearch: true }).then((hit) => hit || fetch(req).then((res) => {
+      if (res.ok) { const copy = res.clone(); caches.open(VERSION).then((c) => c.put(req, copy)); }
+      return res;
+    })));
     return;
   }
   event.respondWith(staleWhileRevalidate(req, VERSION));

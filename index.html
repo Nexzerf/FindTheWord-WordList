@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="description" content="ค้นหาคำภาษาอังกฤษกว่า 274,000 คำ พร้อมคำแนะนำขณะพิมพ์ ไว้ช่วยเล่นเกม Finish the Word ใน Roblox">
+<meta name="description" content="ค้นหาคำภาษาอังกฤษและอินโดนีเซียกว่า 350,000 คำ พร้อมคำแนะนำขณะพิมพ์ ไว้ช่วยเล่นเกม Finish the Word ใน Roblox">
 <meta name="theme-color" content="#edf1f5" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0f141b" media="(prefers-color-scheme: dark)">
 <meta name="format-detection" content="telephone=no">
@@ -12,7 +12,7 @@
 <meta name="apple-mobile-web-app-title" content="คลังคำ FTW">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta property="og:title" content="คลังคำ Finish the Word">
-<meta property="og:description" content="ค้นหาคำภาษาอังกฤษกว่า 274,000 คำ พร้อมคำแนะนำขณะพิมพ์ ไว้ช่วยเล่นเกม Finish the Word ใน Roblox">
+<meta property="og:description" content="ค้นหาคำภาษาอังกฤษและอินโดนีเซียกว่า 350,000 คำ พร้อมคำแนะนำขณะพิมพ์ ไว้ช่วยเล่นเกม Finish the Word ใน Roblox">
 <meta property="og:image" content="/icons/icon-512.png">
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
@@ -132,6 +132,7 @@ select { font: inherit; font-size: 16px; padding: 8px 10px; min-height: 44px; bo
 .tag.ok { background: var(--sunk); color: var(--good); }
 .tag.hardw { background: var(--trap-soft); color: var(--trap); }
 .tag.rare { background: var(--sunk); color: var(--muted); }
+.tag.lang { background: var(--tile); color: var(--tile-ink); }
 .icon-btn.no { color: var(--trap); }
 .more-hint { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 12px; border-top: 1px dashed var(--line); background: var(--sunk); font-size: 14px; color: var(--muted); }
 .more-hint:first-child { border-top: 0; }
@@ -204,7 +205,7 @@ select { font: inherit; font-size: 16px; padding: 8px 10px; min-height: 44px; bo
     <div class="rack" aria-hidden="true"><span class="t">f</span><span class="t">t</span><span class="t ghost">w</span></div>
     <div>
       <h1>คลังคำ Finish the Word</h1>
-      <p class="sub">หาคำอังกฤษที่ขึ้นต้นด้วยตัวที่ต้องต่อ · <span class="stat" id="totalStat">กำลังโหลดคลังคำ…</span></p>
+      <p class="sub">หาคำอังกฤษและอินโดนีเซียที่ขึ้นต้นด้วยตัวที่ต้องต่อ · <span class="stat" id="totalStat">กำลังโหลดคลังคำ…</span></p>
     </div>
     <div class="appbar">
       <button type="button" class="install" id="installBtn" hidden>ติดตั้งแอป</button>
@@ -225,6 +226,11 @@ select { font: inherit; font-size: 16px; padding: 8px 10px; min-height: 44px; bo
     </div>
   </div>
   <div class="controls">
+      <div class="seg" role="group" aria-label="ภาษา">
+        <button type="button" data-lang="en" aria-pressed="true">อังกฤษ</button>
+        <button type="button" data-lang="id" aria-pressed="false">อินโดนีเซีย</button>
+        <button type="button" data-lang="both" aria-pressed="false">ทั้งสองภาษา</button>
+      </div>
       <div class="seg" role="group" aria-label="วิธีค้นหา">
         <button type="button" data-mode="start" aria-pressed="true">ขึ้นต้นด้วย</button>
         <button type="button" data-mode="end" aria-pressed="false">ลงท้ายด้วย</button>
@@ -278,7 +284,7 @@ select { font: inherit; font-size: 16px; padding: 8px 10px; min-height: 44px; bo
     </div>
   </section>
 
-  <p class="foot">คำทั่วไปและคำยากจัดระดับตาม SCOWL · คำอื่นจากพจนานุกรม word-list · เกมไม่เปิดเผยรายการคำที่รับ เจอคำที่ใช้ไม่ได้ให้กด “เกมไม่รับ”</p>
+  <p class="foot">อังกฤษ: จัดระดับตาม SCOWL + word-list · อินโดนีเซีย: Indonesian wordlist (public domain) คำทั่วไป = มีใน KBBI เรียงความนิยมจาก Kompas/Wikipedia · เกมไม่เปิดเผยรายการคำที่รับ เจอคำที่ใช้ไม่ได้ให้กด “เกมไม่รับ”</p>
 </div>
 <div class="toast" id="toast" role="status" hidden></div>
 
@@ -296,7 +302,7 @@ select { font: inherit; font-size: 16px; padding: 8px 10px; min-height: 44px; bo
   // ---------- data ----------
   let alpha = [];                // every dictionary word, A→Z
   let dict = new Map();          // word -> tier: 1-3 everyday (SCOWL ≤50), 4-5 harder (≤70), 9 rare/technical
-  const commonRank = new Map();  // word -> popularity rank
+  let commonRank = new Map();    // word -> popularity rank
   let commonList = [];
   let custom = new Map();        // added words -> {addedAt}
   let customSorted = [];
@@ -310,7 +316,7 @@ select { font: inherit; font-size: 16px; padding: 8px 10px; min-height: 44px; bo
     set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
   };
   let used = new Set(store.get("ftw-used-v1", []));
-  const state = { q: "", mode: "start", level: store.get("ftw-level", "common"), sort: store.get("ftw-sort", "common"), hideUsed: store.get("ftw-hide", false), shown: PAGE, active: -1, sugg: [] };
+  const state = { q: "", lang: store.get("ftw-lang", "en"), mode: "start", level: store.get("ftw-level", "common"), sort: store.get("ftw-sort", "common"), hideUsed: store.get("ftw-hide", false), shown: PAGE, active: -1, sugg: [] };
   els.sort.value = state.sort;
   els.hideUsed.checked = state.hideUsed;
 
@@ -332,31 +338,68 @@ select { font: inherit; font-size: 16px; padding: 8px 10px; min-height: 44px; bo
   const maxStart = () => Math.max(...LETTERS.map((l) => startCount[l]));
   const isHardLetter = (l) => startCount[l] > 0 && startCount[l] < maxStart() * 0.12;
 
+  // word files: popular words by rank, "#", then every word A→Z with a level digit (1-5, none = rare)
+  const LANG_FILES = { en: "words.txt", id: "words-id.txt" };
+  const packs = {};
+  async function loadPack(lang) {
+    if (packs[lang]) return packs[lang];
+    const res = await fetch(LANG_FILES[lang]);
+    if (!res.ok) throw new Error(res.status);
+    const text = await res.text();
+    const cut = text.indexOf("\n#\n");
+    const pack = { common: text.slice(0, cut).split("\n").filter(Boolean), alpha: [], dict: new Map() };
+    for (const line of text.slice(cut + 3).split("\n")) {
+      if (!line) continue;
+      const last = line.charCodeAt(line.length - 1);
+      const tier = last >= 49 && last <= 53 ? last - 48 : 9;
+      const w = tier === 9 ? line : line.slice(0, -1);
+      pack.alpha.push(w); pack.dict.set(w, tier);
+    }
+    return (packs[lang] = pack);
+  }
+  function mergeSorted(a, b) {
+    const out = []; let i = 0, j = 0;
+    while (i < a.length || j < b.length) {
+      const x = a[i], y = b[j];
+      if (j >= b.length || (i < a.length && x < y)) { out.push(x); i++; }
+      else if (i >= a.length || y < x) { out.push(y); j++; }
+      else { out.push(x); i++; j++; }
+    }
+    return out;
+  }
+  function activate(list) {
+    if (list.length === 1) {
+      ({ alpha, dict } = list[0]); commonList = list[0].common;
+    } else {
+      const [a, b] = list;
+      alpha = mergeSorted(a.alpha, b.alpha);
+      dict = new Map(b.dict);
+      for (const [w, t] of a.dict) dict.set(w, Math.min(t, dict.get(w) ?? 9));
+      const seen = new Set(); commonList = [];
+      for (let i = 0; i < Math.max(a.common.length, b.common.length); i++)
+        for (const w of [a.common[i], b.common[i]]) if (w && !seen.has(w)) { seen.add(w); commonList.push(w); }
+    }
+    commonRank = new Map(commonList.map((w, i) => [w, i]));
+  }
+  let loadToken = 0;
   async function loadWords() {
-    renderState("กำลังโหลดคลังคำ…", "ประมาณ 277,000 คำ ใช้เวลาไม่กี่วินาที");
+    const langs = state.lang === "both" ? ["en", "id"] : [state.lang];
+    const token = ++loadToken;
+    if (!langs.every((l) => packs[l])) {
+      loaded = false;
+      renderState("กำลังโหลดคลังคำ…", langs.includes("en") ? "ประมาณ 277,000 คำ ใช้เวลาไม่กี่วินาที" : "ประมาณ 79,000 คำ ใช้เวลาไม่กี่วินาที");
+    }
     try {
-      const res = await fetch("words.txt");
-      if (!res.ok) throw new Error(res.status);
-      const text = await res.text();
-      const cut = text.indexOf("\n#\n");
-      commonList = text.slice(0, cut).split("\n").filter(Boolean);
-      const lines = text.slice(cut + 3).split("\n");
-      alpha = [];
-      dict = new Map();
-      for (const line of lines) {
-        if (!line) continue;
-        const last = line.charCodeAt(line.length - 1);
-        const tier = last >= 49 && last <= 53 ? last - 48 : 9;   // trailing digit 1-5, none = rare
-        const w = tier === 9 ? line : line.slice(0, -1);
-        alpha.push(w); dict.set(w, tier);
-      }
-      commonList.forEach((w, i) => commonRank.set(w, i));
+      const list = await Promise.all(langs.map(loadPack));
+      if (token !== loadToken) return;      // the language changed again while loading
+      activate(list);
       loaded = true;
       recount();
       renderTotal();
       renderLetters();
       update();
     } catch (e) {
+      if (token !== loadToken) return;
       renderState("โหลดคลังคำไม่สำเร็จ", "เช็กอินเทอร์เน็ตแล้วลองอีกครั้ง", true);
       els.totalStat.textContent = "โหลดไม่สำเร็จ";
     }
@@ -420,6 +463,7 @@ select { font: inherit; font-size: 16px; padding: 8px 10px; min-height: 44px; bo
     if (commonRank.has(w) && tier <= 3) t += '<span class="tag common">ใช้บ่อย</span>';
     if (tier === 4 || tier === 5) t += '<span class="tag hardw">คำยาก</span>';
     if (tier === 9) t += '<span class="tag rare">หายาก</span>';
+    if (state.lang === "both" && packs.id && packs.en && packs.id.dict.has(w) && !packs.en.dict.has(w)) t += '<span class="tag lang">อินโด</span>';
     if (custom.has(w) && !dict.has(w)) t += '<span class="tag mine">เพิ่มเอง</span>';
     if (used.has(w)) t += '<span class="tag usedtag">ใช้แล้ว</span>';
     return t;
@@ -591,6 +635,13 @@ select { font: inherit; font-size: 16px; padding: 8px 10px; min-height: 44px; bo
     if (loaded) { recount(); renderLetters(); update(); }
   }
   document.querySelectorAll("[data-level]").forEach((b) => b.addEventListener("click", () => setLevel(b.dataset.level)));
+  function setLang(lang, silent) {
+    state.lang = lang; store.set("ftw-lang", lang);
+    document.querySelectorAll("[data-lang]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.lang === lang)));
+    if (!silent) loadWords();
+  }
+  document.querySelectorAll("[data-lang]").forEach((b) => b.addEventListener("click", () => { if (b.dataset.lang !== state.lang) setLang(b.dataset.lang); }));
+  setLang(LANG_FILES[state.lang] || state.lang === "both" ? state.lang : "en", true);
   setLevel(LEVEL_MAX[state.level] ? state.level : "common");
   els.sort.addEventListener("change", () => { state.sort = els.sort.value; store.set("ftw-sort", state.sort); update(); });
   els.hideUsed.addEventListener("change", () => { state.hideUsed = els.hideUsed.checked; store.set("ftw-hide", state.hideUsed); update(); });
