@@ -133,6 +133,7 @@ select { font: inherit; font-size: 16px; padding: 8px 10px; min-height: 44px; bo
 .tag.hardw { background: var(--trap-soft); color: var(--trap); }
 .tag.rare { background: var(--sunk); color: var(--muted); }
 .tag.lang { background: var(--tile); color: var(--tile-ink); }
+.tag.roman { background: var(--accent-soft); color: var(--accent); font-family: var(--font-mono); }
 .icon-btn.no { color: var(--trap); }
 .more-hint { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 12px; border-top: 1px dashed var(--line); background: var(--sunk); font-size: 14px; color: var(--muted); }
 .more-hint:first-child { border-top: 0; }
@@ -249,6 +250,7 @@ select { font: inherit; font-size: 16px; padding: 8px 10px; min-height: 44px; bo
         <option value="az">A → Z</option>
       </select>
       <label class="chk"><input type="checkbox" id="hideUsed"> ซ่อนคำที่ใช้แล้ว</label>
+      <label class="chk"><input type="checkbox" id="romanOn"> รวมเลขโรมัน (xxix = 29)</label>
   </div>
 
   <section aria-label="เลือกตัวอักษรแรก" style="display:flex;flex-direction:column;gap:8px">
@@ -316,7 +318,7 @@ select { font: inherit; font-size: 16px; padding: 8px 10px; min-height: 44px; bo
     set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
   };
   let used = new Set(store.get("ftw-used-v1", []));
-  const state = { q: "", lang: store.get("ftw-lang", "en"), mode: "start", level: store.get("ftw-level", "common"), sort: store.get("ftw-sort", "common"), hideUsed: store.get("ftw-hide", false), shown: PAGE, active: -1, sugg: [] };
+  const state = { q: "", lang: store.get("ftw-lang", "en"), mode: "start", level: store.get("ftw-level", "common"), sort: store.get("ftw-sort", "common"), hideUsed: store.get("ftw-hide", false), roman: store.get("ftw-roman", true), shown: PAGE, active: -1, sugg: [] };
   els.sort.value = state.sort;
   els.hideUsed.checked = state.hideUsed;
 
@@ -367,6 +369,18 @@ select { font: inherit; font-size: 16px; padding: 8px 10px; min-height: 44px; bo
     }
     return out;
   }
+  // Roman numerals 2-3999 (the game accepts them, e.g. xxix, xxxix): extra answers for X and trap endings
+  function toRoman(n) {
+    const parts = [[1000, "m"], [900, "cm"], [500, "d"], [400, "cd"], [100, "c"], [90, "xc"], [50, "l"], [40, "xl"], [10, "x"], [9, "ix"], [5, "v"], [4, "iv"], [1, "i"]];
+    let out = "";
+    for (const [v, r] of parts) while (n >= v) { out += r; n -= v; }
+    return out;
+  }
+  const ROMAN = new Map();       // numeral -> value
+  for (let n = 1; n < 4000; n++) { const r = toRoman(n); if (r.length >= 2) ROMAN.set(r, n); }
+  const ROMAN_SORTED = [...ROMAN.keys()].sort();
+  let romanOnly = new Set();     // numerals that are not also ordinary words (e.g. not "mix")
+
   function activate(list) {
     if (list.length === 1) {
       ({ alpha, dict } = list[0]); commonList = list[0].common;
@@ -378,6 +392,12 @@ select { font: inherit; font-size: 16px; padding: 8px 10px; min-height: 44px; bo
       const seen = new Set(); commonList = [];
       for (let i = 0; i < Math.max(a.common.length, b.common.length); i++)
         for (const w of [a.common[i], b.common[i]]) if (w && !seen.has(w)) { seen.add(w); commonList.push(w); }
+    }
+    romanOnly = new Set();
+    if (state.roman) {
+      alpha = mergeSorted(alpha, ROMAN_SORTED);
+      dict = new Map(dict);
+      for (const r of ROMAN_SORTED) if (!dict.has(r)) { dict.set(r, 3); romanOnly.add(r); }
     }
     commonRank = new Map(commonList.map((w, i) => [w, i]));
   }
@@ -463,6 +483,7 @@ select { font: inherit; font-size: 16px; padding: 8px 10px; min-height: 44px; bo
     if (commonRank.has(w) && tier <= 3) t += '<span class="tag common">ใช้บ่อย</span>';
     if (tier === 4 || tier === 5) t += '<span class="tag hardw">คำยาก</span>';
     if (tier === 9) t += '<span class="tag rare">หายาก</span>';
+    if (romanOnly.has(w)) t += `<span class="tag roman">เลขโรมัน ${ROMAN.get(w)}</span>`;
     if (state.lang === "both" && packs.id && packs.en && packs.id.dict.has(w) && !packs.en.dict.has(w)) t += '<span class="tag lang">อินโด</span>';
     if (custom.has(w) && !dict.has(w)) t += '<span class="tag mine">เพิ่มเอง</span>';
     if (used.has(w)) t += '<span class="tag usedtag">ใช้แล้ว</span>';
@@ -645,6 +666,9 @@ select { font: inherit; font-size: 16px; padding: 8px 10px; min-height: 44px; bo
   setLevel(LEVEL_MAX[state.level] ? state.level : "common");
   els.sort.addEventListener("change", () => { state.sort = els.sort.value; store.set("ftw-sort", state.sort); update(); });
   els.hideUsed.addEventListener("change", () => { state.hideUsed = els.hideUsed.checked; store.set("ftw-hide", state.hideUsed); update(); });
+  const romanBox = $("romanOn");
+  romanBox.checked = state.roman;
+  romanBox.addEventListener("change", () => { state.roman = romanBox.checked; store.set("ftw-roman", state.roman); loadWords(); });
   els.letters.addEventListener("click", (e) => { const b = e.target.closest(".lt"); if (b) setQuery(b.dataset.l, "start"); });
   els.more.addEventListener("click", () => { state.shown += PAGE; renderResults(); });
   els.list.addEventListener("click", (e) => {
